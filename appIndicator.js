@@ -52,6 +52,25 @@ const SNIconType = {
     OVERLAY: 2,
 };
 
+const home_dir = GLib.get_home_dir();
+const replacefile_path = ["/usr/share/indicators/application/", home_dir + "/.local/share/indicators/application/"];
+const replacefile_fn = "replace.keyfile";
+
+let replace_file = false;
+let replace_arr = null;
+
+let replace_arr_sys = (readFile(replacefile_path[0]+replacefile_fn));
+let replace_arr_user = (readFile(replacefile_path[1]+replacefile_fn));
+
+if (replace_arr_user !== null){
+    replace_arr = replace_arr_user;
+    replace_file = true;
+}
+else if (replace_arr_user == null && replace_arr_sys !== null){
+    replace_arr = replace_arr_sys;
+    replace_file = true;
+}
+
 /**
  * the AppIndicator class serves as a generic container for indicator information and functions common
  * for every displaying implementation (IndicatorMessageSource and IndicatorStatusIcon)
@@ -365,14 +384,19 @@ class AppIndicators_IconActor extends St.Icon {
 
         this._loadingIcons.add(id);
         let path = this._getIconInfo(iconName, themePath, iconSize, scale_factor);
-        this._createIconByName(path, (gicon) => {
-            this._loadingIcons.delete(id);
-            if (gicon) {
-                gicon.inUse = true;
-                this._iconCache.add(id, gicon);
-            }
+        if (path){
+            this._createIconByName(path, (gicon) => {
+                this._loadingIcons.delete(id);
+                if (gicon) {
+                    gicon.inUse = true;
+                    this._iconCache.add(id, gicon);
+                }
+                callback(gicon);
+            });
+        }
+        else {
             callback(gicon);
-        });
+        }
     }
 
     _createIconByPath(path, width, height, callback) {
@@ -441,7 +465,7 @@ class AppIndicators_IconActor extends St.Icon {
             // this allows us to sneak in an indicator provided search path and to avoid ugly upscaled icons
 
             // indicator-application looks up a special "panel" variant, we just replicate that here
-            name = name + "-panel";
+            // name = name + "-panel";
 
             // icon info as returned by the lookup
             let iconInfo = null;
@@ -570,7 +594,30 @@ class AppIndicators_IconActor extends St.Icon {
         }
 
         let [name, pixmap, theme] = icon;
-        if (name && name.length) {
+        let name_alt = null;
+        for (let val of replace_arr) {
+            if (this._indicator.id == val[0]){
+                name_alt = val[1]
+                }
+        }
+        // the alternative name should be looked up first
+         if (name_alt && name_alt.length) {
+            this._cacheOrCreateIconByName(iconSize, name_alt, theme, (gicon) => {
+                if (!gicon && name && name.length) {
+                    this._cacheOrCreateIconByName(iconSize, name, theme, (gicon) => {
+                    if (!gicon && pixmap) {
+                        gicon = this._createIconFromPixmap(iconSize,
+                            pixmap, iconType);
+                    }
+                    this._setGicon(iconType, gicon);
+                    });
+                } else if (!gicon && pixmap) {
+                    gicon = this._createIconFromPixmap(iconSize,
+                        pixmap, iconType);
+                }
+                this._setGicon(iconType, gicon);
+            });
+        } else if (name && name.length) {
             this._cacheOrCreateIconByName(iconSize, name, theme, (gicon) => {
                 if (!gicon && pixmap) {
                     gicon = this._createIconFromPixmap(iconSize,
@@ -649,3 +696,21 @@ class AppIndicators_IconActor extends St.Icon {
         this._updateOverlayIcon()
     }
 });
+
+
+function readFile(path) {
+    let test = GLib.file_test(path, GLib.FileTest.IS_REGULAR)
+    if (!test) {
+        return null;
+        }
+    let [err, data] = GLib.file_get_contents(path);
+    let s_data = String(data).split("\n");
+    let ret_arr = [];
+    for (let val of s_data) {
+        if (!val.includes(","))
+            continue;
+        let temp_val = val.split(",")
+        ret_arr.push(temp_val);
+    }
+    return ret_arr;
+}
