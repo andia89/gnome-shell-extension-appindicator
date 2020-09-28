@@ -384,19 +384,14 @@ class AppIndicators_IconActor extends St.Icon {
 
         this._loadingIcons.add(id);
         let path = this._getIconInfo(iconName, themePath, iconSize, scale_factor);
-        if (path){
-            this._createIconByName(path, (gicon) => {
-                this._loadingIcons.delete(id);
-                if (gicon) {
-                    gicon.inUse = true;
-                    this._iconCache.add(id, gicon);
-                }
-                callback(gicon);
-            });
-        }
-        else {
+        this._createIconByName(path, (gicon) => {
+            this._loadingIcons.delete(id);
+            if (gicon) {
+                gicon.inUse = true;
+                this._iconCache.add(id, gicon);
+            }
             callback(gicon);
-        }
+        });
     }
 
     _createIconByPath(path, width, height, callback) {
@@ -594,6 +589,7 @@ class AppIndicators_IconActor extends St.Icon {
         }
 
         let [name, pixmap, theme] = icon;
+
         let name_alt = null;
         for (let val of replace_arr) {
             if (this._indicator.id == val[0]){
@@ -601,14 +597,17 @@ class AppIndicators_IconActor extends St.Icon {
                 }
         }
         // the alternative name should be looked up first
-         if (name_alt && name_alt.length) {
+         if (((name && name.length) || (pixmap && iconType == SNIconType.NORMAL)) && name_alt && name_alt.length) {
+
             this._cacheOrCreateIconByName(iconSize, name_alt, theme, (gicon) => {
+
                 if (!gicon && name && name.length) {
                     this._cacheOrCreateIconByName(iconSize, name, theme, (gicon) => {
                     if (!gicon && pixmap) {
                         gicon = this._createIconFromPixmap(iconSize,
                             pixmap, iconType);
                     }
+
                     this._setGicon(iconType, gicon);
                     });
                 } else if (!gicon && pixmap) {
