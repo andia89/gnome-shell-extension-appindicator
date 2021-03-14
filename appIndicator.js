@@ -723,7 +723,6 @@ class AppIndicatorsIconActor extends St.Icon {
                 name_alt = val[1]
                 }
         }
-        
         let gicon = null;
         try {
             if ((name && name.length) && (name_alt && name_alt.length)) {
@@ -732,6 +731,10 @@ class AppIndicatorsIconActor extends St.Icon {
         		gicon = await this._cacheOrCreateIconByName(iconSize, name, theme);}
                 if (!gicon && pixmap)
                     gicon = await this._createIconFromPixmap(iconSize, pixmap, iconType);
+            } else if ((pixmap && pixmap.length) && (name_alt && name_alt.length)) {
+                gicon = await this._cacheOrCreateIconByName(iconSize, name_alt, theme);
+                if (!gicon)
+                    gicon = await this._createIconFromPixmap(iconSize, pixmap, iconType);   
             } else if (name && name.length) {
                 gicon = await this._cacheOrCreateIconByName(iconSize, name, theme);
                 if (!gicon && pixmap)
@@ -739,7 +742,7 @@ class AppIndicatorsIconActor extends St.Icon {
             } else if (pixmap) {
                 gicon = await this._createIconFromPixmap(iconSize, pixmap, iconType);
             }
-
+Util.Logger.warn(gicon);
             this._setGicon(iconType, gicon);
         } catch (e) {
             /* We handle the error messages already */
