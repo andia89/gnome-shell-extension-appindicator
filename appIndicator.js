@@ -742,7 +742,7 @@ class AppIndicatorsIconActor extends St.Icon {
             } else if (pixmap) {
                 gicon = await this._createIconFromPixmap(iconSize, pixmap, iconType);
             }
-Util.Logger.warn(gicon);
+
             this._setGicon(iconType, gicon);
         } catch (e) {
             /* We handle the error messages already */
